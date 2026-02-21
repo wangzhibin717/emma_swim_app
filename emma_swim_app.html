@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emma 游泳记录小助手 (网页版)</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+
+        button.success {
+            background-color: var(--success-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--light-bg);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: var(--light-bg);
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+        }
+
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background-color: var(--success-color);
+            color: white;
+            border-radius: 4px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🏊‍♀️ Emma 游泳记录小助手</h1>
+        <p>无需安装，双击即用的网页版</p>
+    </div>
+
+    <div id="notification">操作成功！</div>
+
+    <div class="actions">
+        <button onclick="exportCSV()" class="success">⬇️ 导出数据 (CSV)</button>
+        <div class="file-input-wrapper">
+            <button class="secondary">⬆️ 导入数据 (CSV)</button>
+            <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(this)">
+        </div>
+        <button onclick="clearData()" class="secondary" style="background-color: var(--danger-color);">🗑️ 清空数据</button>
+    </div>
+
+    <div class="card">
+        <h2>📝 添加新记录</h2>
+        <form id="recordForm" onsubmit="addRecord(event)">
+            <div class="form-group">
+                <label for="date">日期</label>
+                <input type="date" id="date" required>
+            </div>
+            <div class="form-group">
+                <label for="stroke">泳姿</label>
+                <select id="stroke">
+                    <option value="蛙泳">蛙泳</option>
+                    <option value="自由泳">自由泳</option>
+                    <option value="仰泳">仰泳</option>
+                    <option value="蝶泳">蝶泳</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="distance">距离 (米)</label>
+                <input type="number" id="distance" min="0" step="50" value="50" required>
+            </div>
+            <div class="form-group">
+                <label>时间</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="timeMin" placeholder="分" min="0" max="59" value="0" style="width: 48%;">
+                    <span style="align-self: center;">:</span>
+                    <input type="number" id="timeSec" placeholder="秒" min="0" max="59" value="0" style="width: 48%;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="note">备注</label>
+                <textarea id="note" rows="2" placeholder="例如：状态很好"></textarea>
+            </div>
+            <button type="submit">保存记录</button>
+        </form>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div>总次数</div>
+            <div class="stat-value" id="totalSwims">0</div>
+        </div>
+        <div class="stat-box">
+            <div>总距离 (米)</div>
+            <div class="stat-value" id="totalDistance">0</div>
+        </div>
+        <div class="stat-box">
+            <div>最爱泳姿</div>
+            <div class="stat-value" id="favStroke">-</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📊 泳姿分布</h2>
+        <div class="chart-container">
+            <canvas id="strokeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 历史记录</h2>
+        <div style="overflow-x: auto;">
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>泳姿</th>
+                        <th>距离(米)</th>
+                        <th>时间</th>
+                        <th>备注</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Records will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data Management ---
+    let records = [];
+    const STORAGE_KEY = 'emma_swim_records';
+
+    // Load data on startup
+    function loadData() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                records = JSON.parse(stored);
+            } catch (e) {
+                console.error("Failed to parse stored data", e);
+                records = [];
+            }
+        }
+        
+        // If empty, maybe add sample data? No, keep it clean.
+        renderAll();
+    }
+
+    // Save data to localStorage
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        renderAll();
+    }
+
+    // Add a new record
+    function addRecord(event) {
+        event.preventDefault();
+        
+        const date = document.getElementById('date').value;
+        const stroke = document.getElementById('stroke').value;
+        const distance = parseInt(document.getElementById('distance').value);
+        const min = document.getElementById('timeMin').value.padStart(2, '0');
+        const sec = document.getElementById('timeSec').value.padStart(2, '0');
+        const time = `${min}:${sec}`;
+        const note = document.getElementById('note').value;
+
+        const newRecord = {
+            id: Date.now(), // Simple unique ID
+            date,
+            stroke,
+            distance,
+            time,
+            note
+        };
+
+        records.push(newRecord);
+        saveData();
+        
+        // Reset form (keep date)
+        document.getElementById('stroke').value = "蛙泳";
+        document.getElementById('distance').value = 50;
+        document.getElementById('timeMin').value = 0;
+        document.getElementById('timeSec').value = 0;
+        document.getElementById('note').value = "";
+        
+        showNotification("记录已保存！");
+    }
+
+    // Delete a record
+    function deleteRecord(id) {
+        if(confirm("确定要删除这条记录吗？")) {
+            records = records.filter(r => r.id !== id);
+            saveData();
+            showNotification("记录已删除");
+        }
+    }
+
+    // Clear all data
+    function clearData() {
+        if(confirm("警告：这将清空所有记录且无法恢复！确定吗？")) {
+            records = [];
+            saveData();
+            showNotification("所有数据已清空");
+        }
+    }
+
+    // --- Rendering ---
+    function renderAll() {
+        renderTable();
+        renderStats();
+        renderChart();
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector('#recordsTable tbody');
+        tbody.innerHTML = '';
+
+        // Sort by date descending
+        const sortedRecords = [...records].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (sortedRecords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暂无记录</td></tr>';
+            return;
+        }
+
+        sortedRecords.forEach(record => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${record.date}</td>
+                <td>${record.stroke}</td>
+                <td>${record.distance}</td>
+                <td>${record.time}</td>
+                <td>${record.note || ''}</td>
+                <td><button onclick="deleteRecord(${record.id})" style="padding: 5px 10px; font-size: 12px; background-color: var(--danger-color);">删除</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderStats() {
+        document.getElementById('totalSwims').innerText = records.length;
+        
+        const totalDist = records.reduce((sum, r) => sum + (parseInt(r.distance) || 0), 0);
+        document.getElementById('totalDistance').innerText = totalDist;
+
+        if (records.length === 0) {
+            document.getElementById('favStroke').innerText = "-";
+            return;
+        }
+
+        const counts = {};
+        records.forEach(r => {
+            counts[r.stroke] = (counts[r.stroke] || 0) + 1;
+        });
+
+        let fav = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+        document.getElementById('favStroke').innerText = fav;
+    }
+
+    // --- Chart ---
+    let myChart = null;
+
+    function renderChart() {
+        const ctx = document.getElementById('strokeChart').getContext('2d');
+        
+        // Group data by stroke
+        const strokeDistances = {};
+        records.forEach(r => {
+            strokeDistances[r.stroke] = (strokeDistances[r.stroke] || 0) + (parseInt(r.distance) || 0);
+        });
+
+        const labels = Object.keys(strokeDistances);
+        const data = Object.values(strokeDistances);
+
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '总距离 (米)',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Import / Export ---
+
+    function exportCSV() {
+        if (records.length === 0) {
+            alert("没有数据可导出！");
+            return;
+        }
+
+        // CSV Header
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Add BOM for Excel
+        csvContent += "日期,泳姿,距离(米),时间,备注\n";
+
+        // CSV Rows
+        records.forEach(r => {
+            const row = [
+                r.date,
+                r.stroke,
+                r.distance,
+                r.time,
+                `"${(r.note || '').replace(/"/g, '""')}"` // Escape quotes
+            ].join(",");
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "emma_swimming_records.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function importCSV(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            const rows = text.split('\n');
+            
+            let newCount = 0;
+            // Skip header (assuming first row is header if it contains "日期")
+            let startIndex = 0;
+            if (rows[0] && rows[0].includes("日期")) {
+                startIndex = 1;
+            }
+
+            for(let i = startIndex; i < rows.length; i++) {
+                const row = rows[i].trim();
+                if (!row) continue;
+
+                // Simple CSV parsing (won't handle commas inside quotes perfectly without regex, but sufficient for simple data)
+                // Better approach: use a regex or library, but keep it simple for single file
+                // Let's assume standard format: date,stroke,dist,time,"note"
+                
+                // Regex to handle quoted strings containing commas
+                const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                // Fallback to simple split if regex fails or structure is simple
+                const cols = row.split(","); 
+
+                if (cols.length >= 4) {
+                    // Basic validation
+                    const date = cols[0].trim();
+                    // If date is valid-ish
+                    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        records.push({
+                            id: Date.now() + i, // Unique-ish ID
+                            date: cols[0].trim(),
+                            stroke: cols[1].trim(),
+                            distance: parseInt(cols[2].trim()) || 0,
+                            time: cols[3].trim(),
+                            note: cols.slice(4).join(",").replace(/^"|"$/g, '').replace(/""/g, '"') // Rejoin remaining cols as note and strip quotes
+                        });
+                        newCount++;
+                    }
+                }
+            }
+
+            saveData();
+            showNotification(`成功导入 ${newCount} 条记录！`);
+            input.value = ''; // Reset input
+        };
+        reader.readAsText(file);
+    }
+
+    function showNotification(msg) {
+        const notif = document.getElementById('notification');
+        notif.innerText = msg;
+        notif.style.display = 'block';
+        setTimeout(() => {
+            notif.style.display = 'none';
+        }, 3000);
+    }
+
+    // Initialize
+    document.getElementById('date').valueAsDate = new Date();
+    loadData();
+
+</script>
+
+</body>
+</html>
