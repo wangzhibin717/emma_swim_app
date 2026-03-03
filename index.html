@@ -1,890 +1,911 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emma 游泳记录 (云同步版)</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emma 游泳记录 (云同步版) —— git同步</title>
     <style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --info-color: #17a2b8;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --light-bg: #f8f9fa;
-        }
+      :root {
+        --primary-color: #007bff;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --info-color: #17a2b8;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --light-bg: #f8f9fa;
+      }
 
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f7f6;
+        color: #333;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 10px;
+      }
+
+      .header h1 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+      }
+
+      .status-bar {
+        background-color: #e9ecef;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+      }
+
+      .status-online {
+        background-color: var(--success-color);
+      }
+      .status-offline {
+        background-color: var(--secondary-color);
+      }
+      .status-error {
+        background-color: var(--danger-color);
+      }
+      .status-syncing {
+        background-color: var(--warning-color);
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+
+      button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 12px 24px; /* Larger padding for touch */
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        touch-action: manipulation; /* Improves touch response */
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      button:active {
+        transform: translateY(1px); /* Visual feedback */
+      }
+
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* Mobile optimizations */
+      @media (max-width: 600px) {
+        * {
+          /* Disable zoom on tap */
+          touch-action: manipulation;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f7f6;
-            color: #333;
+          padding: 10px;
         }
 
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-        }
-        
-        .header h1 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
+          padding: 15px;
         }
 
         .status-bar {
-            background-color: #e9ecef;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        
-        .status-online { background-color: var(--success-color); }
-        .status-offline { background-color: var(--secondary-color); }
-        .status-error { background-color: var(--danger-color); }
-        .status-syncing { background-color: var(--warning-color); animation: pulse 1s infinite; }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+          flex-direction: column;
+          gap: 10px;
+          align-items: stretch;
+          text-align: center;
         }
 
-        .card {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 20px;
+        .status-bar > div {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          width: 100%;
         }
 
-        .form-group {
-            margin-bottom: 15px;
+        /* Make top buttons bigger on mobile */
+        .status-bar button {
+          flex: 1;
+          padding: 10px;
+          font-size: 14px !important;
+          height: 44px; /* Minimum touch target size */
         }
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 24px; /* Larger padding for touch */
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            touch-action: manipulation; /* Improves touch response */
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-        
-        button:active {
-            transform: translateY(1px); /* Visual feedback */
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Mobile optimizations */
-        @media (max-width: 600px) {
-            * {
-                /* Disable zoom on tap */
-                touch-action: manipulation;
-            }
-            body {
-                padding: 10px;
-            }
-            
-            .container {
-                padding: 15px;
-            }
-
-            .status-bar {
-                flex-direction: column;
-                gap: 10px;
-                align-items: stretch;
-                text-align: center;
-            }
-            
-            .status-bar > div {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-                width: 100%;
-            }
-
-            /* Make top buttons bigger on mobile */
-            .status-bar button {
-                flex: 1;
-                padding: 10px;
-                font-size: 14px !important;
-                height: 44px; /* Minimum touch target size */
-            }
-            
-            input, select, textarea {
-                font-size: 16px; /* Prevents iOS zoom on focus */
-                padding: 12px;
-            }
-
-            .modal-content {
-                margin: 20px auto; /* More space on top */
-                width: 90%;
-            }
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: var(--light-bg);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-box {
-            background: var(--light-bg);
-            padding: 15px;
-            border-radius: 4px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        #notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px;
-            background-color: var(--success-color);
-            color: white;
-            border-radius: 4px;
-            display: none;
-            z-index: 1000;
-        }
-
-        /* Modal for Settings */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0;
-            top: 0;
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.4); 
+        input,
+        select,
+        textarea {
+          font-size: 16px; /* Prevents iOS zoom on focus */
+          padding: 12px;
         }
 
         .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto; 
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%; 
-            max-width: 500px;
-            border-radius: 8px;
+          margin: 20px auto; /* More space on top */
+          width: 90%;
         }
+      }
 
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
 
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .btn-sm {
-            padding: 8px 16px;
-            font-size: 14px;
-        }
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+      }
 
-        .btn-info { background-color: var(--info-color); }
-        .btn-secondary { background-color: var(--secondary-color); }
-    /* Chart.js for charts removed */
+      th {
+        background-color: var(--light-bg);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-box {
+        background: var(--light-bg);
+        padding: 15px;
+        border-radius: 4px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--primary-color);
+      }
+
+      #notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px;
+        background-color: var(--success-color);
+        color: white;
+        border-radius: 4px;
+        display: none;
+        z-index: 1000;
+      }
+
+      /* Modal for Settings */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 8px;
+      }
+
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .btn-sm {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+
+      .btn-info {
+        background-color: var(--info-color);
+      }
+      .btn-secondary {
+        background-color: var(--secondary-color);
+      }
+      /* Chart.js for charts removed */
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-
-<div class="container">
-    <div class="header">
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
         <h1>☁️ Emma 游泳记录 (云同步版)</h1>
         <p>多设备实时同步数据</p>
-    </div>
+      </div>
 
-    <div class="status-bar">
+      <div class="status-bar">
         <div>
-            <span id="statusIndicator" class="status-indicator status-offline"></span>
-            <span id="statusText">未连接云端</span>
+          <span id="statusIndicator" class="status-indicator status-offline"></span>
+          <span id="statusText">未连接云端</span>
         </div>
         <div>
-            <button onclick="manualSync()" ontouchstart="" class="btn-sm btn-info">🔄 立即同步</button>
-            <button onclick="openSettings()" ontouchstart="" class="btn-sm btn-secondary">⚙️ 设置</button>
+          <button onclick="manualSync()" ontouchstart="" class="btn-sm btn-info">🔄 立即同步</button>
+          <button onclick="openSettings()" ontouchstart="" class="btn-sm btn-secondary">⚙️ 设置</button>
         </div>
-    </div>
+      </div>
 
-    <div id="notification">操作成功！</div>
+      <div id="notification">操作成功！</div>
 
-    <!-- Setup Wizard / Empty State -->
-    <div id="setupWizard" class="card" style="display: none; border-color: var(--warning-color); background-color: #fff3cd;">
+      <!-- Setup Wizard / Empty State -->
+      <div id="setupWizard" class="card" style="display: none; border-color: var(--warning-color); background-color: #fff3cd">
         <h3>⚠️ 未配置云端同步</h3>
         <p>为了启用多设备同步功能，您需要配置云端数据库信息。</p>
         <button onclick="openSettings()">现在配置</button>
-    </div>
+      </div>
 
-    <div class="card">
+      <div class="card">
         <h2>📝 添加新记录</h2>
         <form id="recordForm" onsubmit="addRecord(event)">
-            <div class="form-group">
-                <label for="date">日期</label>
-                <input type="date" id="date" required>
+          <div class="form-group">
+            <label for="date">日期</label>
+            <input type="date" id="date" required />
+          </div>
+          <div class="form-group">
+            <label for="stroke">泳姿</label>
+            <select id="stroke">
+              <option value="蛙泳">蛙泳</option>
+              <option value="自由泳">自由泳</option>
+              <option value="仰泳">仰泳</option>
+              <option value="蝶泳">蝶泳</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="distance">距离 (米)</label>
+            <input type="number" id="distance" min="0" step="5" value="50" required />
+          </div>
+          <div class="form-group">
+            <label>时间 (分:秒.百分秒)</label>
+            <div style="display: flex; gap: 10px">
+              <input type="number" id="timeMin" placeholder="分" min="0" max="59" value="0" style="width: 30%" />
+              <span style="align-self: center">:</span>
+              <input type="number" id="timeSec" placeholder="秒" min="0" max="59" value="0" style="width: 30%" />
+              <span style="align-self: center">.</span>
+              <input type="number" id="timeMs" placeholder="百分秒" min="0" max="99" value="0" style="width: 30%" />
             </div>
-            <div class="form-group">
-                <label for="stroke">泳姿</label>
-                <select id="stroke">
-                    <option value="蛙泳">蛙泳</option>
-                    <option value="自由泳">自由泳</option>
-                    <option value="仰泳">仰泳</option>
-                    <option value="蝶泳">蝶泳</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="distance">距离 (米)</label>
-                <input type="number" id="distance" min="0" step="5" value="50" required>
-            </div>
-            <div class="form-group">
-                <label>时间 (分:秒.百分秒)</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="number" id="timeMin" placeholder="分" min="0" max="59" value="0" style="width: 30%;">
-                    <span style="align-self: center;">:</span>
-                    <input type="number" id="timeSec" placeholder="秒" min="0" max="59" value="0" style="width: 30%;">
-                    <span style="align-self: center;">.</span>
-                    <input type="number" id="timeMs" placeholder="百分秒" min="0" max="99" value="0" style="width: 30%;">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="note">备注</label>
-                <textarea id="note" rows="2" placeholder="例如：状态很好"></textarea>
-            </div>
-            <button type="submit" id="submitBtn">保存并同步</button>
+          </div>
+          <div class="form-group">
+            <label for="note">备注</label>
+            <textarea id="note" rows="2" placeholder="例如：状态很好"></textarea>
+          </div>
+          <button type="submit" id="submitBtn">保存并同步</button>
         </form>
-    </div>
+      </div>
 
-    <!-- Stats Grid Removed as per request -->
+      <!-- Stats Grid Removed as per request -->
 
-    <!-- Personal Best Records - 100m -->
-    <div class="card">
+      <!-- Personal Best Records - 100m -->
+      <div class="card">
         <h2>🏆 历史 100 米最快记录 (秒)</h2>
-        <div id="pbContainer100" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-            <!-- PBs will be inserted here -->
+        <div id="pbContainer100" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px">
+          <!-- PBs will be inserted here -->
         </div>
-    </div>
+      </div>
 
-    <!-- Personal Best Records - 50m -->
-    <div class="card">
+      <!-- Personal Best Records - 50m -->
+      <div class="card">
         <h2>🏆 历史 50 米最快记录 (秒)</h2>
-        <div id="pbContainer50" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-            <!-- PBs will be inserted here -->
+        <div id="pbContainer50" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px">
+          <!-- PBs will be inserted here -->
         </div>
-    </div>
+      </div>
 
-    <div class="card">
+      <div class="card">
         <h2>📈 速度趋势图 (米/秒)</h2>
-        <div style="position: relative; height: 300px;">
-            <canvas id="speedChart"></canvas>
+        <div style="position: relative; height: 300px">
+          <canvas id="speedChart"></canvas>
         </div>
-    </div>
+      </div>
 
-    <div class="card">
+      <div class="card">
         <h2>📋 历史记录</h2>
-        <div style="overflow-x: auto;">
-            <table id="recordsTable">
-                <thead>
-                    <tr>
-                        <th>日期</th>
-                        <th>泳姿</th>
-                        <th>距离(米)</th>
-                        <th>时间</th>
-                        <th>备注</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Records will be inserted here -->
-                </tbody>
-            </table>
+        <div style="overflow-x: auto">
+          <table id="recordsTable">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>泳姿</th>
+                <th>距离(米)</th>
+                <th>时间</th>
+                <th>备注</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Records will be inserted here -->
+            </tbody>
+          </table>
         </div>
+      </div>
     </div>
-</div>
 
-<!-- Settings Modal -->
-<div id="settingsModal" class="modal">
-    <div class="modal-content">
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
         <span class="close" onclick="closeSettings()">&times;</span>
         <h2>⚙️ 云端配置</h2>
         <p>请输入您的 JSONBin.io 配置信息以启用同步。</p>
         <div class="form-group">
-            <label for="apiKey">Master Key (API Key)</label>
-            <input type="password" id="apiKey" placeholder="例如: $2a$10$..." onchange="saveConfig()">
+          <label for="apiKey">Master Key (API Key)</label>
+          <input type="password" id="apiKey" placeholder="例如: $2a$10$..." onchange="saveConfig()" />
         </div>
         <div class="form-group">
-            <label for="binId">Bin ID</label>
-            <input type="text" id="binId" placeholder="例如: 664..." onchange="saveConfig()">
+          <label for="binId">Bin ID</label>
+          <input type="text" id="binId" placeholder="例如: 664..." onchange="saveConfig()" />
         </div>
-        <div style="margin-top: 10px; font-size: 12px; color: #666;">
-            <p>提示：这些信息会自动保存在此浏览器的本地缓存中。</p>
+        <div style="margin-top: 10px; font-size: 12px; color: #666">
+          <p>提示：这些信息会自动保存在此浏览器的本地缓存中。</p>
         </div>
         <button onclick="testConnectionAndClose()">测试连接并保存</button>
+      </div>
     </div>
-</div>
 
-<script>
-    // --- Configuration & State ---
-    let CONFIG = {
+    <script>
+      // --- Configuration & State ---
+      let CONFIG = {
         apiKey: '',
-        binId: ''
-    };
-    
-    let records = [];
-    let isSyncing = false;
+        binId: '',
+      }
 
-    // Load config from localStorage on startup
-    function loadConfig() {
-        const storedKey = localStorage.getItem('emma_cloud_api_key');
-        const storedBin = localStorage.getItem('emma_cloud_bin_id');
-        
+      let records = []
+      let isSyncing = false
+
+      // Load config from localStorage on startup
+      function loadConfig() {
+        const storedKey = localStorage.getItem('emma_cloud_api_key')
+        const storedBin = localStorage.getItem('emma_cloud_bin_id')
+
         if (storedKey && storedBin) {
-            CONFIG.apiKey = storedKey;
-            CONFIG.binId = storedBin;
-            document.getElementById('apiKey').value = storedKey;
-            document.getElementById('binId').value = storedBin;
-            return true;
+          CONFIG.apiKey = storedKey
+          CONFIG.binId = storedBin
+          document.getElementById('apiKey').value = storedKey
+          document.getElementById('binId').value = storedBin
+          return true
         }
-        return false;
-    }
+        return false
+      }
 
-    // Save config to localStorage
-    function saveConfig() {
-        const key = document.getElementById('apiKey').value.trim();
-        const bin = document.getElementById('binId').value.trim();
-        
+      // Save config to localStorage
+      function saveConfig() {
+        const key = document.getElementById('apiKey').value.trim()
+        const bin = document.getElementById('binId').value.trim()
+
         if (key && bin) {
-            localStorage.setItem('emma_cloud_api_key', key);
-            localStorage.setItem('emma_cloud_bin_id', bin);
-            CONFIG.apiKey = key;
-            CONFIG.binId = bin;
+          localStorage.setItem('emma_cloud_api_key', key)
+          localStorage.setItem('emma_cloud_bin_id', bin)
+          CONFIG.apiKey = key
+          CONFIG.binId = bin
         }
-    }
+      }
 
-    // --- Cloud API (JSONBin.io) ---
-    
-    async function fetchCloudData() {
-        if (!CONFIG.apiKey || !CONFIG.binId) return null;
+      // --- Cloud API (JSONBin.io) ---
 
-        updateStatus('syncing', '正在同步...');
-        isSyncing = true;
+      async function fetchCloudData() {
+        if (!CONFIG.apiKey || !CONFIG.binId) return null
+
+        updateStatus('syncing', '正在同步...')
+        isSyncing = true
 
         try {
-            const response = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
-                method: 'GET',
-                headers: {
-                    'X-Master-Key': CONFIG.apiKey
-                }
-            });
+          const response = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
+            method: 'GET',
+            headers: {
+              'X-Master-Key': CONFIG.apiKey,
+            },
+          })
 
-            if (!response.ok) throw new Error('Network response was not ok');
+          if (!response.ok) throw new Error('Network response was not ok')
 
-            const data = await response.json();
-            // JSONBin returns data in 'record' field
-            const cloudRecords = data.record.records || []; 
-            
-            updateStatus('online', '已同步');
-            return cloudRecords;
+          const data = await response.json()
+          // JSONBin returns data in 'record' field
+          const cloudRecords = data.record.records || []
+
+          updateStatus('online', '已同步')
+          return cloudRecords
         } catch (error) {
-            console.error('Fetch error:', error);
-            updateStatus('error', '同步失败 (请检查网络或配置)');
-            return null;
+          console.error('Fetch error:', error)
+          updateStatus('error', '同步失败 (请检查网络或配置)')
+          return null
         } finally {
-            isSyncing = false;
+          isSyncing = false
         }
-    }
+      }
 
-    async function saveCloudData(newRecords) {
+      async function saveCloudData(newRecords) {
         if (!CONFIG.apiKey || !CONFIG.binId) {
-            alert("请先配置云端信息！");
-            return false;
+          alert('请先配置云端信息！')
+          return false
         }
 
-        updateStatus('syncing', '正在保存到云端...');
-        isSyncing = true;
-        document.getElementById('submitBtn').disabled = true;
+        updateStatus('syncing', '正在保存到云端...')
+        isSyncing = true
+        document.getElementById('submitBtn').disabled = true
 
         try {
-            const response = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': CONFIG.apiKey
-                },
-                body: JSON.stringify({ records: newRecords })
-            });
+          const response = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': CONFIG.apiKey,
+            },
+            body: JSON.stringify({ records: newRecords }),
+          })
 
-            if (!response.ok) throw new Error('Save failed');
+          if (!response.ok) throw new Error('Save failed')
 
-            updateStatus('online', '保存成功');
-            showNotification('✅ 数据已同步到云端！');
-            return true;
+          updateStatus('online', '保存成功')
+          showNotification('✅ 数据已同步到云端！')
+          return true
         } catch (error) {
-            console.error('Save error:', error);
-            updateStatus('error', '保存失败');
-            alert("保存到云端失败，请检查网络！");
-            return false;
+          console.error('Save error:', error)
+          updateStatus('error', '保存失败')
+          alert('保存到云端失败，请检查网络！')
+          return false
         } finally {
-            isSyncing = false;
-            document.getElementById('submitBtn').disabled = false;
+          isSyncing = false
+          document.getElementById('submitBtn').disabled = false
         }
-    }
+      }
 
-    // --- App Logic ---
+      // --- App Logic ---
 
-    // Ensure DOM is fully loaded before init
-    document.addEventListener('DOMContentLoaded', initApp);
+      // Ensure DOM is fully loaded before init
+      document.addEventListener('DOMContentLoaded', initApp)
 
-    async function initApp() {
-        document.getElementById('date').valueAsDate = new Date();
+      async function initApp() {
+        document.getElementById('date').valueAsDate = new Date()
 
         /* Chart related listeners removed */
-        
-        if (loadConfig()) {
-            document.getElementById('setupWizard').style.display = 'none';
-            // Initial fetch
-            const cloudData = await fetchCloudData();
-            if (cloudData) {
-                records = cloudData;
-                renderAll();
-            }
-        } else {
-            document.getElementById('setupWizard').style.display = 'block';
-            updateStatus('offline', '未配置');
-        }
-    }
 
-    async function manualSync() {
-        console.log("手动同步触发");
-        updateStatus('syncing', '正在尝试连接...');
-        
+        if (loadConfig()) {
+          document.getElementById('setupWizard').style.display = 'none'
+          // Initial fetch
+          const cloudData = await fetchCloudData()
+          if (cloudData) {
+            records = cloudData
+            renderAll()
+          }
+        } else {
+          document.getElementById('setupWizard').style.display = 'block'
+          updateStatus('offline', '未配置')
+        }
+      }
+
+      async function manualSync() {
+        console.log('手动同步触发')
+        updateStatus('syncing', '正在尝试连接...')
+
         // Ensure UI updates before heavy work
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 50))
 
         if (!CONFIG.apiKey || !CONFIG.binId) {
-            alert("⚠️ 尚未配置云端信息。\n请点击'设置'输入您的 Key 和 ID。");
-            updateStatus('offline', '未配置');
-            return;
+          alert("⚠️ 尚未配置云端信息。\n请点击'设置'输入您的 Key 和 ID。")
+          updateStatus('offline', '未配置')
+          return
         }
 
         try {
-            const cloudData = await fetchCloudData();
-            if (cloudData) {
-                records = cloudData;
-                renderAll();
-                showNotification('🔄 同步完成');
-            }
+          const cloudData = await fetchCloudData()
+          if (cloudData) {
+            records = cloudData
+            renderAll()
+            showNotification('🔄 同步完成')
+          }
         } catch (e) {
-            console.error("Sync error:", e);
-            alert("同步出错: " + e.message);
+          console.error('Sync error:', e)
+          alert('同步出错: ' + e.message)
         }
-    }
+      }
 
-    async function addRecord(event) {
-        event.preventDefault();
-        
+      async function addRecord(event) {
+        event.preventDefault()
+
         // 1. Fetch latest data first to avoid overwriting others' changes
         // (Simple concurrency handling: read-modify-write)
-        const latestCloudData = await fetchCloudData();
+        const latestCloudData = await fetchCloudData()
         if (latestCloudData) {
-            records = latestCloudData;
+          records = latestCloudData
         } else if (CONFIG.apiKey) {
-            // If fetch failed but we have config, maybe warn user?
-            // For now, we proceed optimistically if it's just network glitch, 
-            // but ideally we should block. 
-            // Let's block to be safe.
-            if(!confirm("无法获取最新云端数据。强制写入可能会覆盖其他人的修改。是否继续？")) {
-                return;
-            }
+          // If fetch failed but we have config, maybe warn user?
+          // For now, we proceed optimistically if it's just network glitch,
+          // but ideally we should block.
+          // Let's block to be safe.
+          if (!confirm('无法获取最新云端数据。强制写入可能会覆盖其他人的修改。是否继续？')) {
+            return
+          }
         }
 
         // 2. Prepare new record
-        const date = document.getElementById('date').value;
-        const stroke = document.getElementById('stroke').value;
-        const distance = parseInt(document.getElementById('distance').value);
-        const min = document.getElementById('timeMin').value.padStart(2, '0');
-        const sec = document.getElementById('timeSec').value.padStart(2, '0');
-        const ms = document.getElementById('timeMs').value.padStart(2, '0');
-        const time = `${min}:${sec}.${ms}`;
-        const note = document.getElementById('note').value;
+        const date = document.getElementById('date').value
+        const stroke = document.getElementById('stroke').value
+        const distance = parseInt(document.getElementById('distance').value)
+        const min = document.getElementById('timeMin').value.padStart(2, '0')
+        const sec = document.getElementById('timeSec').value.padStart(2, '0')
+        const ms = document.getElementById('timeMs').value.padStart(2, '0')
+        const time = `${min}:${sec}.${ms}`
+        const note = document.getElementById('note').value
 
         const newRecord = {
-            id: Date.now(),
-            date,
-            stroke,
-            distance,
-            time,
-            note
-        };
+          id: Date.now(),
+          date,
+          stroke,
+          distance,
+          time,
+          note,
+        }
 
-        records.push(newRecord);
+        records.push(newRecord)
 
         // 3. Save to cloud
-        const success = await saveCloudData(records);
-        
+        const success = await saveCloudData(records)
+
         if (success) {
-            renderAll();
-            // Reset form
-            document.getElementById('stroke').value = "蛙泳";
-            document.getElementById('distance').value = 50;
-            document.getElementById('timeMin').value = 0;
-            document.getElementById('timeSec').value = 0;
-            document.getElementById('timeMs').value = 0;
-            document.getElementById('note').value = "";
+          renderAll()
+          // Reset form
+          document.getElementById('stroke').value = '蛙泳'
+          document.getElementById('distance').value = 50
+          document.getElementById('timeMin').value = 0
+          document.getElementById('timeSec').value = 0
+          document.getElementById('timeMs').value = 0
+          document.getElementById('note').value = ''
         }
-    }
+      }
 
-    async function deleteRecord(id) {
-        if(confirm("确定要从云端删除这条记录吗？")) {
-            // Fetch latest first
-            const latestCloudData = await fetchCloudData();
-            if (latestCloudData) records = latestCloudData;
+      async function deleteRecord(id) {
+        if (confirm('确定要从云端删除这条记录吗？')) {
+          // Fetch latest first
+          const latestCloudData = await fetchCloudData()
+          if (latestCloudData) records = latestCloudData
 
-            records = records.filter(r => r.id !== id);
-            
-            const success = await saveCloudData(records);
-            if (success) renderAll();
+          records = records.filter(r => r.id !== id)
+
+          const success = await saveCloudData(records)
+          if (success) renderAll()
         }
-    }
+      }
 
-    // --- UI Helpers ---
+      // --- UI Helpers ---
 
-    function updateStatus(type, text) {
-        const indicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        
-        indicator.className = 'status-indicator'; // reset
-        indicator.classList.add('status-' + type);
-        statusText.innerText = text;
-    }
+      function updateStatus(type, text) {
+        const indicator = document.getElementById('statusIndicator')
+        const statusText = document.getElementById('statusText')
 
-    function showNotification(msg) {
-        const notif = document.getElementById('notification');
-        notif.innerText = msg;
-        notif.style.display = 'block';
+        indicator.className = 'status-indicator' // reset
+        indicator.classList.add('status-' + type)
+        statusText.innerText = text
+      }
+
+      function showNotification(msg) {
+        const notif = document.getElementById('notification')
+        notif.innerText = msg
+        notif.style.display = 'block'
         setTimeout(() => {
-            notif.style.display = 'none';
-        }, 3000);
-    }
+          notif.style.display = 'none'
+        }, 3000)
+      }
 
-    // --- Settings Modal ---
-    function openSettings() {
-        document.getElementById('settingsModal').style.display = 'block';
-    }
+      // --- Settings Modal ---
+      function openSettings() {
+        document.getElementById('settingsModal').style.display = 'block'
+      }
 
-    function closeSettings() {
-        document.getElementById('settingsModal').style.display = 'none';
-    }
+      function closeSettings() {
+        document.getElementById('settingsModal').style.display = 'none'
+      }
 
-    async function testConnectionAndClose() {
-        saveConfig();
-        const data = await fetchCloudData();
+      async function testConnectionAndClose() {
+        saveConfig()
+        const data = await fetchCloudData()
         if (data !== null) {
-            alert("连接成功！");
-            records = data;
-            renderAll();
-            document.getElementById('setupWizard').style.display = 'none';
-            closeSettings();
+          alert('连接成功！')
+          records = data
+          renderAll()
+          document.getElementById('setupWizard').style.display = 'none'
+          closeSettings()
         } else {
-            alert("连接失败，请检查 Key 和 ID 是否正确。");
+          alert('连接失败，请检查 Key 和 ID 是否正确。')
         }
-    }
+      }
 
-    // Close modal when clicking outside
-    window.onclick = function(event) {
+      // Close modal when clicking outside
+      window.onclick = function (event) {
         if (event.target == document.getElementById('settingsModal')) {
-            closeSettings();
+          closeSettings()
         }
-    }
+      }
 
-    // --- Rendering (Same as before) ---
-    function renderAll() {
-        renderTable();
+      // --- Rendering (Same as before) ---
+      function renderAll() {
+        renderTable()
         // renderStats removed
-        renderPB();
-        renderSpeedChart();
-    }
+        renderPB()
+        renderSpeedChart()
+      }
 
-    function renderPB() {
-        renderPBForDistance(100, 'pbContainer100');
-        renderPBForDistance(50, 'pbContainer50');
-    }
+      function renderPB() {
+        renderPBForDistance(100, 'pbContainer100')
+        renderPBForDistance(50, 'pbContainer50')
+      }
 
-    function renderPBForDistance(targetDist, containerId) {
-        const pbContainer = document.getElementById(containerId);
-        if (!pbContainer) return;
-        
-        pbContainer.innerHTML = '';
-        
-        const bests = {}; // stroke -> { seconds: float, date: string, dist: int, time: string }
+      function renderPBForDistance(targetDist, containerId) {
+        const pbContainer = document.getElementById(containerId)
+        if (!pbContainer) return
+
+        pbContainer.innerHTML = ''
+
+        const bests = {} // stroke -> { seconds: float, date: string, dist: int, time: string }
 
         records.forEach(r => {
-            const parts = r.time.split(/[:.]/); 
-            let totalSec = 0;
-            if(parts.length >= 2) {
-                totalSec += parseInt(parts[0] || 0) * 60;
-                totalSec += parseInt(parts[1] || 0);
-                if(parts.length >= 3) {
-                    totalSec += parseInt(parts[2] || 0) / 100;
-                }
+          const parts = r.time.split(/[:.]/)
+          let totalSec = 0
+          if (parts.length >= 2) {
+            totalSec += parseInt(parts[0] || 0) * 60
+            totalSec += parseInt(parts[1] || 0)
+            if (parts.length >= 3) {
+              totalSec += parseInt(parts[2] || 0) / 100
             }
-            
-            const dist = parseInt(r.distance) || 0;
-            if(dist === targetDist && totalSec > 0) {
-                if (!bests[r.stroke] || totalSec < bests[r.stroke].seconds) {
-                    bests[r.stroke] = {
-                        seconds: totalSec,
-                        date: r.date,
-                        dist: dist,
-                        time: r.time,
-                        displaySeconds: totalSec.toFixed(2)
-                    };
-                }
+          }
+
+          const dist = parseInt(r.distance) || 0
+          if (dist === targetDist && totalSec > 0) {
+            if (!bests[r.stroke] || totalSec < bests[r.stroke].seconds) {
+              bests[r.stroke] = {
+                seconds: totalSec,
+                date: r.date,
+                dist: dist,
+                time: r.time,
+                displaySeconds: totalSec.toFixed(2),
+              }
             }
-        });
+          }
+        })
 
         if (Object.keys(bests).length === 0) {
-            pbContainer.innerHTML = `<div style="color:#666; font-style:italic;">暂无 ${targetDist} 米记录</div>`;
-            return;
+          pbContainer.innerHTML = `<div style="color:#666; font-style:italic;">暂无 ${targetDist} 米记录</div>`
+          return
         }
 
         // Color mapping
         const colors = {
-            '蛙泳': '#e8f5e9', // light green
-            '自由泳': '#e3f2fd', // light blue
-            '仰泳': '#fff8e1', // light orange
-            '蝶泳': '#f3e5f5'  // light purple
-        };
-        
+          蛙泳: '#e8f5e9', // light green
+          自由泳: '#e3f2fd', // light blue
+          仰泳: '#fff8e1', // light orange
+          蝶泳: '#f3e5f5', // light purple
+        }
+
         const textColors = {
-            '蛙泳': '#2e7d32',
-            '自由泳': '#1565c0',
-            '仰泳': '#f57f17',
-            '蝶泳': '#7b1fa2'
-        };
+          蛙泳: '#2e7d32',
+          自由泳: '#1565c0',
+          仰泳: '#f57f17',
+          蝶泳: '#7b1fa2',
+        }
 
         for (const [stroke, data] of Object.entries(bests)) {
-            const div = document.createElement('div');
-            div.className = 'stat-box'; // Reuse stat-box style for consistency
-            div.style.backgroundColor = colors[stroke] || '#f5f5f5';
-            div.style.padding = '10px';
-            
-            div.innerHTML = `
+          const div = document.createElement('div')
+          div.className = 'stat-box' // Reuse stat-box style for consistency
+          div.style.backgroundColor = colors[stroke] || '#f5f5f5'
+          div.style.padding = '10px'
+
+          div.innerHTML = `
                 <div style="font-size:14px; font-weight:bold; color:#333; margin-bottom:5px;">${stroke}</div>
                 <div style="font-size:24px; font-weight:bold; color:${textColors[stroke] || '#333'}">${data.displaySeconds}<span style="font-size:12px;">秒</span></div>
                 <div style="font-size:11px; color:#666; margin-top:5px;">日期：${data.date}</div>
                 <div style="font-size:11px; color:#888;">用时：${data.time}</div>
-            `;
-            pbContainer.appendChild(div);
+            `
+          pbContainer.appendChild(div)
         }
-    }
+      }
 
-    function renderTable() {
-        const tbody = document.querySelector('#recordsTable tbody');
-        tbody.innerHTML = '';
-        const sortedRecords = [...records].sort((a, b) => new Date(b.date) - new Date(a.date));
+      function renderTable() {
+        const tbody = document.querySelector('#recordsTable tbody')
+        tbody.innerHTML = ''
+        const sortedRecords = [...records].sort((a, b) => new Date(b.date) - new Date(a.date))
 
         if (sortedRecords.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暂无记录</td></tr>';
-            return;
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暂无记录</td></tr>'
+          return
         }
 
         sortedRecords.forEach(record => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
+          const row = document.createElement('tr')
+          row.innerHTML = `
                 <td>${record.date}</td>
                 <td>${record.stroke}</td>
                 <td>${record.distance}</td>
                 <td>${record.time}</td>
                 <td>${record.note || ''}</td>
                 <td><button onclick="deleteRecord(${record.id})" style="padding: 5px 10px; font-size: 12px; background-color: var(--danger-color);">删除</button></td>
-            `;
-            tbody.appendChild(row);
-        });
-    }
+            `
+          tbody.appendChild(row)
+        })
+      }
 
-    /* renderStats removed */
+      /* renderStats removed */
 
-    function renderSpeedChart() {
-        const ctx = document.getElementById('speedChart').getContext('2d');
-        
+      function renderSpeedChart() {
+        const ctx = document.getElementById('speedChart').getContext('2d')
+
         // 按日期排序记录
-        const sortedRecords = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
-        
+        const sortedRecords = [...records].sort((a, b) => new Date(a.date) - new Date(b.date))
+
         // 获取所有唯一的日期并排序
-        const allDates = [...new Set(sortedRecords.map(r => r.date))].sort((a, b) => new Date(a) - new Date(b));
-        
+        const allDates = [...new Set(sortedRecords.map(r => r.date))].sort((a, b) => new Date(a) - new Date(b))
+
         // 准备数据结构
-        const strokes = ['蛙泳', '自由泳', '仰泳', '蝶泳'];
+        const strokes = ['蛙泳', '自由泳', '仰泳', '蝶泳']
         const colors = {
-            '蛙泳': '#2e7d32',
-            '自由泳': '#1565c0',
-            '仰泳': '#f57f17',
-            '蝶泳': '#7b1fa2'
-        };
-        
+          蛙泳: '#2e7d32',
+          自由泳: '#1565c0',
+          仰泳: '#f57f17',
+          蝶泳: '#7b1fa2',
+        }
+
         // 为每种泳姿准备数据
         const datasets = strokes.map(stroke => {
-            // 为每种泳姿创建一个按日期索引的映射
-            const strokeRecordMap = {};
-            sortedRecords
-                .filter(r => r.stroke === stroke)
-                .forEach(r => {
-                    // 计算速度：距离(米) / 时间(秒)
-                    const parts = r.time.split(/[:.]/);
-                    let totalSec = 0;
-                    if(parts.length >= 2) {
-                        totalSec += parseInt(parts[0] || 0) * 60;
-                        totalSec += parseInt(parts[1] || 0);
-                        if(parts.length >= 3) {
-                            totalSec += parseInt(parts[2] || 0) / 100;
-                        }
-                    }
-                    const speed = totalSec > 0 ? parseFloat(r.distance) / totalSec : 0;
-                    strokeRecordMap[r.date] = speed;
-                });
-            
-            // 为每个日期生成数据点，没有数据的日期使用null
-            const speeds = allDates.map(date => strokeRecordMap[date] !== undefined ? strokeRecordMap[date] : null);
-            
-            return {
-                label: stroke,
-                data: speeds,
-                borderColor: colors[stroke],
-                backgroundColor: colors[stroke] + '20', // 20% opacity
-                borderWidth: 2,
-                tension: 0.1,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                spanGaps: true // 跳过null值的间隙
-            };
-        });
-        
+          // 为每种泳姿创建一个按日期索引的映射
+          const strokeRecordMap = {}
+          sortedRecords
+            .filter(r => r.stroke === stroke)
+            .forEach(r => {
+              // 计算速度：距离(米) / 时间(秒)
+              const parts = r.time.split(/[:.]/)
+              let totalSec = 0
+              if (parts.length >= 2) {
+                totalSec += parseInt(parts[0] || 0) * 60
+                totalSec += parseInt(parts[1] || 0)
+                if (parts.length >= 3) {
+                  totalSec += parseInt(parts[2] || 0) / 100
+                }
+              }
+              const speed = totalSec > 0 ? parseFloat(r.distance) / totalSec : 0
+              strokeRecordMap[r.date] = speed
+            })
+
+          // 为每个日期生成数据点，没有数据的日期使用null
+          const speeds = allDates.map(date => (strokeRecordMap[date] !== undefined ? strokeRecordMap[date] : null))
+
+          return {
+            label: stroke,
+            data: speeds,
+            borderColor: colors[stroke],
+            backgroundColor: colors[stroke] + '20', // 20% opacity
+            borderWidth: 2,
+            tension: 0.1,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            spanGaps: true, // 跳过null值的间隙
+          }
+        })
+
         // 销毁旧图表（如果存在）
         if (window.speedChartInstance) {
-            window.speedChartInstance.destroy();
+          window.speedChartInstance.destroy()
         }
-        
+
         // 创建新图表
         window.speedChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: allDates,
-                datasets: datasets
+          type: 'line',
+          data: {
+            labels: allDates,
+            datasets: datasets,
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+              },
+              title: {
+                display: false,
+              },
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: false
-                    }
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: '速度 (米/秒)',
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: '速度 (米/秒)'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: '日期'
-                        }
-                    }
-                }
-            }
-        });
-    }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: '日期',
+                },
+              },
+            },
+          },
+        })
+      }
 
-    // Start - Removed direct call, using event listener instead
-    // initApp();
-
-</script>
-
-</body>
+      // Start - Removed direct call, using event listener instead
+      // initApp();
+    </script>
+  </body>
 </html>
